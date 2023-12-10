@@ -1,0 +1,316 @@
+#include <fstream>
+#include <winbgim.h>
+#include <windows.h>
+#include <string.h>
+
+using namespace std;
+
+#define MAX 20
+#define latime 75
+
+#define SUS 72
+#define JOS 80
+#define STG 75
+#define DRP 77
+#define ESC 27
+#define SPC 32
+#define TAB 9
+#define BKS 8
+
+int imario, jmario, ipostaza;
+int prevImario, prevJmario;
+char tasta;
+string directie;
+
+int scor,nrstelute;
+
+int nrLinii,nrColoane,i,j;
+char harta[MAX][MAX];
+char car;
+
+ifstream fisier("harta2.txt");
+std::ofstream logFile("gameLog.txt", std::ios::app); // Открываем файл для записи
+
+
+// Глобальные переменные для камеры
+int cameraX = 0, cameraY = 0;
+int cameraWidth = 1000;
+int cameraHeight = 1000;
+
+void updateCameraPosition() {
+    cameraX = max(0, min(nrColoane * latime - cameraWidth, jmario * latime - cameraWidth / 2));
+    cameraY = max(0, min(nrLinii * latime - cameraHeight, imario * latime - cameraHeight / 2));
+}
+
+
+void afiseazaMario() {
+    int screenX = jmario * latime - cameraX;  // Расчет координаты X на экране
+    int screenY = imario * latime - cameraY;  // Расчет координаты Y на экране
+
+    // Проверяем, находится ли Марио в пределах видимой области камеры
+    if (screenX >= 0 && screenX < cameraWidth && screenY >= 0 && screenY < cameraHeight) {
+        switch (ipostaza) {
+            case -10:
+                readimagefile("mario_spate1.jpg", screenX, screenY, screenX + latime, screenY + latime);
+                break;
+            case 10:
+                readimagefile("mario_spate2.jpg", screenX, screenY, screenX + latime, screenY + latime);
+                break;
+            case 1:
+                readimagefile("mario11.jpg", screenX, screenY, screenX + latime, screenY + latime);
+                break;
+            case 2:
+                readimagefile("mario22.jpg", screenX, screenY, screenX + latime, screenY + latime);
+                break;
+            case -1:
+                readimagefile("mario55.jpg", screenX, screenY, screenX + latime, screenY + latime);
+                break;
+            case -2:
+                readimagefile("mario66.jpg", screenX, screenY, screenX + latime, screenY + latime);
+                break;
+            // Добавьте другие случаи, если они есть
+        }
+    }
+}
+
+void afiseazaPoza(char c, int i, int j) {
+    int screenX = j * latime - cameraX; // Расчет координаты X на экране
+    int screenY = i * latime - cameraY; // Расчет координаты Y на экране
+
+    // Проверяем, находится ли элемент карты в пределах видимой области камеры
+    if (screenX >= 0 && screenX < cameraWidth && screenY >= 0 && screenY < cameraHeight) {
+        string filename;
+
+        // Выбор соответствующего файла изображения в зависимости от символа карты
+        switch (c) {
+            case '@': filename = "iarba.jpg"; break;
+            case '#': filename = "scara.jpg"; break;
+            case '*': filename = "stea.jpg"; break;
+            case '.': filename = "fundal.jpg"; break;
+            case ',': filename = "fundal2.jpg"; break;
+            case '!': filename = "fundal3.jpg"; break;
+            case '?': filename = "fundal4.jpg"; break;
+        }
+
+        // Отрисовка изображения на экране в зависимости от позиции
+        readimagefile(filename.c_str(), screenX, screenY, screenX + latime, screenY + latime);
+    }
+}
+
+void stergeMario() {
+    int screenX = prevJmario * latime - cameraX;
+    int screenY = prevImario * latime - cameraY;
+
+    if (screenX >= 0 && screenX < cameraWidth && screenY >= 0 && screenY < cameraHeight) {
+        afiseazaPoza(harta[prevImario][prevJmario], prevImario, prevJmario);
+    }
+}
+
+void afiseazaScor() {
+    int i;
+    for (i = 1; i <= scor; i++) {
+        readimagefile("stea.jpg", 30 * i, 0, 30 * i + 30, 30);
+    }
+    afiseazaMario();
+    if (scor < nrstelute) {
+        for (i = 800; i <= 1200; i += 30) Beep(i, 20);
+    } else {
+        PlaySound("7.wav", NULL, SND_SYNC); // Проигрывание звука при достижении цели
+        PlaySound("8.wav", NULL, SND_SYNC); // Проигрывание дополнительного звука
+        closegraph(); // Закрытие графического окна
+        exit(0); // Выход из программы
+    }
+}
+
+    void urmatoareaIpostaza() {
+        if (directie == "dreapta") {
+        if (abs(ipostaza) == 10) ipostaza = 1;
+        if (ipostaza < 0) ipostaza = -ipostaza;
+        ipostaza++; if (ipostaza == 2) ipostaza = 1;
+        if (jmario < nrColoane - 1 && harta[imario][jmario + 1] == '.') {
+            jmario++;
+            if (harta[imario][jmario] == '*') {
+                scor++; harta[imario][jmario] = '.'; afiseazaScor();
+            }
+        }
+    } else if (directie == "stanga") {
+        if (abs(ipostaza) == 10) ipostaza = -1;
+        if (ipostaza > 0) ipostaza = -ipostaza;
+        ipostaza--; if (ipostaza == -2) ipostaza = -1;
+        if (jmario > 0 && harta[imario][jmario - 1] == '.') {
+            jmario--;
+            if (harta[imario][jmario] == '*') {
+                scor++; harta[imario][jmario] = '.'; afiseazaScor();
+            }
+        }
+
+    } else if (directie == "sus") {
+        if (abs(ipostaza) == 10) ipostaza = -ipostaza;
+        else ipostaza = 10;
+        if (imario > 0 && harta[imario - 1][jmario] == '#') imario--;
+    } else if (directie == "jos") {
+        if (abs(ipostaza) == 10) ipostaza = -ipostaza;
+        else ipostaza = -10;
+        if (imario < nrLinii - 1 && harta[imario + 1][jmario] == '#') imario++;
+    }
+
+    // Обновление камеры после перемещения Марио
+    updateCameraPosition();
+}
+
+void incarcaHarta()
+{
+    fisier >> nrLinii >> nrColoane;
+    setbkcolor(WHITE);
+    cleardevice();
+    nrstelute = 0;
+    for (i = 0; i < nrLinii; i++) {
+        for (j = 0; j < nrColoane; j++) {
+            fisier >> car;
+            if (car == '*') nrstelute++;
+            if (car == 'M') {
+                imario = i;
+                jmario = j;
+                car = '.';
+            }
+            harta[i][j] = car;
+            afiseazaPoza(harta[i][j], i, j);
+        }
+    }
+    fisier.close();
+
+    scor = 0;
+    updateCameraPosition(); // Обновляем положение камеры
+    afiseazaMario(); // Отображаем Марио после загрузки карты
+}
+
+void showMenu(int &incepeX1, int &incepeY1, int &incepeX2, int &incepeY2,
+              int &inchideX1, int &inchideY1, int &inchideX2, int &inchideY2) {
+    cleardevice();
+    setbkcolor(WHITE); // Установить белый цвет фона
+    setcolor(BLACK); // Установить цвет текста на черный
+    settextstyle(DEFAULT_FONT, HORIZ_DIR, 3); // Установить стиль текста
+
+    // Получаем размеры окна
+    int windowWidth = getmaxx();
+    int windowHeight = getmaxy();
+
+    // Размеры кнопок
+    int buttonWidth = 200;
+    int buttonHeight = 50;
+
+    // Расчет координат для кнопки "Incepe"
+    incepeX1 = (windowWidth - buttonWidth) / 2;
+    incepeY1 = (windowHeight - buttonHeight) / 2 - 60; // Смещение от центра вверх
+    incepeX2 = incepeX1 + buttonWidth;
+    incepeY2 = incepeY1 + buttonHeight;
+
+    // Рисуем кнопку "Incepe"
+    rectangle(incepeX1, incepeY1, incepeX2, incepeY2);
+    outtextxy(incepeX1 + 70, incepeY1 + 15, "Incepe"); // Смещение текста внутри кнопки
+
+    // Расчет координат для кнопки "Inchide"
+    inchideX1 = incepeX1;
+    inchideY1 = incepeY2 + 20; // Смещение от первой кнопки вниз
+    inchideX2 = inchideX1 + buttonWidth;
+    inchideY2 = inchideY1 + buttonHeight;
+
+    // Рисуем кнопку "Inchide"
+    rectangle(inchideX1, inchideY1, inchideX2, inchideY2);
+    outtextxy(inchideX1 + 70, inchideY1 + 15, "Inchide");
+}
+
+bool isInsideButton(int x, int y, int left, int top, int right, int bottom) {
+    return (x >= left && x <= right && y >= top && y <= bottom);
+}
+
+void drawVisibleMap() {
+    for (int i = 0; i < nrLinii; ++i) {
+        for (int j = 0; j < nrColoane; ++j) {
+            int screenX = j * latime - cameraX;
+            int screenY = i * latime - cameraY;
+            if (screenX >= 0 && screenX < cameraWidth && screenY >= 0 && screenY < cameraHeight) {
+                afiseazaPoza(harta[i][j], screenX, screenY);
+            }
+        }
+    }
+    afiseazaMario();
+}
+
+void gameLoop() {
+    // Инициализация направления и постоя Марио
+    directie = "dreapta";
+    ipostaza = 1;
+    afiseazaMario();  // Отображаем Марио в начальной позиции
+
+    while (true) {
+        if (kbhit()) {
+            tasta = getch();
+            if (tasta == ESC) {
+                break;
+            }
+
+            prevImario = imario; // Сохраняем предыдущее положение Марио
+            prevJmario = jmario;
+            stergeMario(); // Стираем предыдущее положение Марио
+
+            if (tasta == STG) directie = "stanga";
+            if (tasta == DRP) directie = "dreapta";
+            if (tasta == SUS) directie = "sus";
+            if (tasta == JOS) directie = "jos";
+            urmatoareaIpostaza(); // Обновляем постою Марио
+
+            // Выводим текущие координаты Марио
+                logFile << "Текущие координаты Марио: X = " << jmario << ", Y = " << imario << std::endl;
+
+            afiseazaMario();
+             delay(100);
+        }
+
+        updateCameraPosition();
+        drawVisibleMap();
+
+        delay(30);
+    }
+}
+
+
+
+int main()
+{
+    initwindow(1000, 1000, "Mario");
+
+    int incepeX1, incepeY1, incepeX2, incepeY2;
+    int inchideX1, inchideY1, inchideX2, inchideY2;
+    showMenu(incepeX1, incepeY1, incepeX2, incepeY2, inchideX1, inchideY1, inchideX2, inchideY2);
+
+    bool running = true;
+    while (running) {
+        if (ismouseclick(WM_LBUTTONDOWN)) {
+            int x, y;
+            getmouseclick(WM_LBUTTONDOWN, x, y);
+
+            // Проверка нажатия на кнопки
+            if (isInsideButton(x, y, incepeX1, incepeY1, incepeX2, incepeY2)) {
+                // Обработка нажатия кнопки "Incepe"
+                cleardevice();
+                // ... Код для запуска игры ...
+                break;
+            } else if (isInsideButton(x, y, inchideX1, inchideY1, inchideX2, inchideY2)) {
+                // Обработка нажатия кнопки "Inchide"
+                running = false;
+                break;
+            }
+        }
+    }
+
+     if (running) {
+        cleardevice();
+        incarcaHarta();
+        gameLoop();
+     }
+
+    closegraph();
+logFile.close();
+    return 0;
+}

@@ -1,0 +1,7 @@
+# depslib dependency file v1.0
+1701779653 source:c:\users\evanghelia\desktop\mario_ok\mario_ok\main.cpp
+	<fstream>
+	<winbgim.h>
+	<windows.h>
+	<string.h>
+
