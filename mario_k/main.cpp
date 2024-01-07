@@ -16,10 +16,15 @@ using namespace std;
 #define SPC 32
 #define TAB 9
 #define BKS 8
+#define SPACE 32
 
 int imario, jmario, ipostaza;
 char tasta;
 string directie;
+bool inJump = false;
+int jumpHeight = 0;
+
+
 
 int scor, nrstelute;
 
@@ -93,50 +98,81 @@ void afiseazaScor()
     }
 }
 
-void urmatoareaIpostaza()
-{
-    if (directie == "dreapta")
-    {
+void urmatoareaIpostaza() {
+    stergeMario();
+
+
+    if (directie == "stanga" && jmario > 0 && harta[imario][jmario - 1] != '@') {
+        jmario--;
+        if (abs(ipostaza) == 10) ipostaza = -1;
+        if (ipostaza > 0) ipostaza = -ipostaza;
+        ipostaza--; if (ipostaza == -2) ipostaza = -1;
+    } else if (directie == "dreapta" && jmario < nrColoane - 1 && harta[imario][jmario + 1] != '@') {
+        jmario++;
         if (abs(ipostaza) == 10) ipostaza = 1;
         if (ipostaza < 0) ipostaza = -ipostaza;
         ipostaza++; if (ipostaza == 2) ipostaza = 1;
-        if (jmario < nrColoane - 1 && (harta[imario + 1][jmario + 1] == '@' || harta[imario + 1][jmario + 1] == '#'))
-        {
-            jmario++;
-            if (harta[imario][jmario] == '*')
-            {
-                scor++; harta[imario][jmario] = '.'; afiseazaScor();
-            }
-        }
     }
-    else
-        if (directie == "stanga")
-        {
-            if (abs(ipostaza) == 10) ipostaza = -1;
-            if (ipostaza > 0) ipostaza = -ipostaza;
-            ipostaza--; if (ipostaza == -2) ipostaza = -1;
-            if (jmario > 0 && (harta[imario + 1][jmario - 1] == '@' || harta[imario + 1][jmario - 1] == '#'))
-            {
-                jmario--;
-                if (harta[imario][jmario] == '*')
-                {
-                    scor++; harta[imario][jmario] = '.'; afiseazaScor();
+
+   // să cadă dacă Mario nu sare și nu există pământ sau scări sub el
+    if (!inJump && harta[imario + 1][jmario] != '@' && harta[imario + 1][jmario] != '#') {
+        inJump = true;
+        jumpHeight = 4;
+    }
+
+
+
+    // Sari logica
+    if (inJump) {
+        if (jumpHeight < 2 && harta[imario - 1][jmario] != '@') {
+            jumpHeight++;
+            imario--;
+        } else if (jumpHeight < 4) {
+            jumpHeight++;
+            if (harta[imario + 1][jmario] == '.' || harta[imario + 1][jmario] == '*') {
+                imario++;
+            } else {
+                inJump = false;
+                jumpHeight = 0;
+                // Adăugați o cădere la pământ dacă nu există teren sub Mario după săritură
+                while (imario < nrLinii - 1 && harta[imario + 1][jmario] != '@') {
+                    imario++;
                 }
             }
+        } else {
+            inJump = false;
+            jumpHeight = 0;
+
+            while (imario < nrLinii - 1 && harta[imario + 1][jmario] != '@') {
+                imario++;
+            }
         }
-    if (directie == "sus")
-    {
-        if (abs(ipostaza) == 10) ipostaza = -ipostaza;
-        else ipostaza = 10;
-        if (harta[imario - 1][jmario] == '#') imario--;
     }
-    if (directie == "jos")
-    {
-        if (abs(ipostaza) == 10) ipostaza = -ipostaza;
-        else ipostaza = -10;
-        if (harta[imario + 1][jmario] == '#') imario++;
+
+
+
+
+
+    if (!inJump) {
+        if (directie == "sus" && harta[imario - 1][jmario] == '#') {
+            imario--;
+            ipostaza = 10;
+        } else if (directie == "jos" && harta[imario + 1][jmario] == '#') {
+            imario++;
+            ipostaza = -10;
+        }
     }
+
+
+    if (harta[imario][jmario] == '*') {
+        scor++;
+        harta[imario][jmario] = '.';
+        afiseazaScor();
+    }
+
+    afiseazaMario();
 }
+
 
 void incarcaHarta()
 {
@@ -228,6 +264,18 @@ void showEndGameMenu() {
     }
 }
 
+bool canJump() {
+    return harta[imario + 1][jmario] == '@' && harta[imario - 1][jmario] != '@';
+}
+
+void jump() {
+    if (canJump() && !inJump) {
+        inJump = true;
+        jumpHeight = 0; // Inițializarea înălțimii săriturii
+    }
+}
+
+
 
 int main()
 {
@@ -253,27 +301,32 @@ int main()
         }
     }
 
-     if (running) {
-        cleardevice();
-        incarcaHarta();
-        ipostaza = 1;
-        afiseazaMario();
-        PlaySound("SuperMarioBros.wav", NULL, SND_ASYNC);
-        directie = "dreapta";
-        do
-        {
+if (running) {
+    cleardevice();
+    incarcaHarta();
+    ipostaza = 1;
+    afiseazaMario();
+    PlaySound("SuperMarioBros.wav", NULL, SND_ASYNC);
+    directie = "none";
+
+    do {
+        if (kbhit()) {
             tasta = getch(); if (tasta == 0) tasta = getch();
-            if (tasta == STG && jmario > 0 && harta[imario + 1][jmario - 1] != '.') directie = "stanga";
-            if (tasta == DRP && jmario < nrColoane - 1 && harta[imario + 1][jmario + 1] != '.')
-                directie = "dreapta";
+            if (tasta == STG && jmario > 0) directie = "stanga";
+            if (tasta == DRP && jmario < nrColoane - 1) directie = "dreapta";
             if (tasta == SUS && harta[imario - 1][jmario] == '#') directie = "sus";
             if (tasta == JOS && harta[imario + 1][jmario] == '#') directie = "jos";
-            stergeMario();
+            if (tasta == SPACE && !inJump) jump();
+
             urmatoareaIpostaza();
-            afiseazaMario();
-            delay(30);
-        } while (tasta != ESC);
-     }
+            directie = "none";
+        } else if (inJump) {
+            urmatoareaIpostaza();
+        }
+
+        delay(30);
+    } while (tasta != ESC);
+}
 
     closegraph();
     gameLog.close();
