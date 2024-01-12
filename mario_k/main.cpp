@@ -90,7 +90,7 @@ void afiseazaScor()
     }
     else
     {
-        PlaySound("7.wav", NULL, SND_SYNC);
+        //PlaySound("7.wav", NULL, SND_SYNC);
         //PlaySound("8.wav", NULL, SND_SYNC);
         showEndGameMenu();
         closegraph();
@@ -101,7 +101,7 @@ void afiseazaScor()
 void urmatoareaIpostaza() {
     stergeMario();
 
-
+    // Verifica gorizontal pozitia
     if (directie == "stanga" && jmario > 0 && harta[imario][jmario - 1] != '@') {
         jmario--;
         if (abs(ipostaza) == 10) ipostaza = -1;
@@ -117,32 +117,20 @@ void urmatoareaIpostaza() {
    // să cadă dacă Mario nu sare și nu există pământ sau scări sub el
     if (!inJump && harta[imario + 1][jmario] != '@' && harta[imario + 1][jmario] != '#') {
         inJump = true;
-        jumpHeight = 4;
+        jumpHeight = 2;
     }
 
 
 
-    // Sari logica
+    //// Sari logica ////
     if (inJump) {
         if (jumpHeight < 2 && harta[imario - 1][jmario] != '@') {
             jumpHeight++;
             imario--;
-        } else if (jumpHeight < 4) {
-            jumpHeight++;
-            if (harta[imario + 1][jmario] == '.' || harta[imario + 1][jmario] == '*') {
-                imario++;
-            } else {
-                inJump = false;
-                jumpHeight = 0;
-                // Adăugați o cădere la pământ dacă nu există teren sub Mario după săritură
-                while (imario < nrLinii - 1 && harta[imario + 1][jmario] != '@') {
-                    imario++;
-                }
-            }
         } else {
             inJump = false;
             jumpHeight = 0;
-
+            // Repetăm ​​logica căderii la pământ
             while (imario < nrLinii - 1 && harta[imario + 1][jmario] != '@') {
                 imario++;
             }
@@ -152,7 +140,7 @@ void urmatoareaIpostaza() {
 
 
 
-
+    // Manipularea mișcării sus/jos fără sărituri pentu scari!
     if (!inJump) {
         if (directie == "sus" && harta[imario - 1][jmario] == '#') {
             imario--;
@@ -163,7 +151,7 @@ void urmatoareaIpostaza() {
         }
     }
 
-
+    // Colectarea articolelor și actualizarea scorului
     if (harta[imario][jmario] == '*') {
         scor++;
         harta[imario][jmario] = '.';
@@ -271,7 +259,7 @@ bool canJump() {
 void jump() {
     if (canJump() && !inJump) {
         inJump = true;
-        jumpHeight = 0; // Inițializarea înălțimii săriturii
+        jumpHeight = 0;
     }
 }
 
@@ -306,7 +294,7 @@ if (running) {
     incarcaHarta();
     ipostaza = 1;
     afiseazaMario();
-    PlaySound("SuperMarioBros.wav", NULL, SND_ASYNC);
+    //PlaySound("SuperMarioBros.wav", NULL, SND_ASYNC);           ////////////
     directie = "none";
 
     do {
@@ -327,6 +315,8 @@ if (running) {
         delay(30);
     } while (tasta != ESC);
 }
+
+
 
     closegraph();
     gameLog.close();
